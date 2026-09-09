@@ -22,6 +22,12 @@ class TranslatorTests(unittest.TestCase):
     def test_window_title_contains_version(self):
         self.assertIn(APP_VERSION, Translator("en").t("window.title", version=APP_VERSION))
 
+    def test_german_catalog_uses_umlauts(self):
+        translator = Translator("de")
+        self.assertIn("Profilprüfung", translator.t("window.title", version=APP_VERSION))
+        self.assertEqual(translator.status(Status.COPIED), "Übernommen")
+        self.assertIn("ungültig", translator.t("legend"))
+
 
 if __name__ == "__main__":
     unittest.main()

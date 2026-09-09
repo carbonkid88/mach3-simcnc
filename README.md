@@ -1,4 +1,4 @@
-# MACH3 → simCNC · Version 0.2.0
+# MACH3 → simCNC · Version 0.2.1
 
 Eigenständige Python-Anwendung mit PyQt5 zur Prüfung eines MACH3-Profils.
 Die erste Version liest Maschinenparameter und bereitet die Migration vor.
@@ -25,7 +25,7 @@ Optional lässt sich eine Datei direkt öffnen:
 ## Bedienung
 
 1. CSMIO/IP-M, CSMIO/IP-S oder CSMIO/IP-A auswählen.
-2. Mit „Durchsuchen“ ein MACH3-Profil laden oder Pfad eingeben und „Einlesen“ wählen.
+2. Mit „Durchsuchen“ ein MACH3-Profil laden oder Pfad eingeben und Enter drücken.
 3. Tabellen für Achsen, Homing/Limits, Spindel, Inputs und Outputs prüfen.
 4. „Weitere Felder“ enthält alle übrigen direkten Preferences-Felder.
 5. „Prüfen“ öffnet Status/Warnungen. Ein Modellwechsel berechnet die Hinweise neu.
@@ -130,7 +130,7 @@ dieses Projekt legt noch keine eigene Distributionslizenz fest.
 
 ---
 
-# MACH3 -> simCNC - Version 0.2.0
+# MACH3 -> simCNC - Version 0.2.1
 
 Standalone Python application with PyQt5 for checking a MACH3 profile.
 The first version reads machine parameters and prepares the migration.
@@ -157,7 +157,7 @@ Optionally, a file can be opened directly:
 ## Usage
 
 1. Select CSMIO/IP-M, CSMIO/IP-S, or CSMIO/IP-A.
-2. Load a MACH3 profile with "Browse", or enter a path and choose "Load".
+2. Load a MACH3 profile with "Browse", or enter a path and press Enter.
 3. Check the tables for axes, homing/limits, spindle, inputs, and outputs.
 4. "Other fields" contains all remaining direct Preferences fields.
 5. "Check" opens status/warnings. Changing the model recalculates the notes.
