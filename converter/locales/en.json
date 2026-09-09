@@ -5,9 +5,10 @@
   },
   "messages": {
     "app.name": "MACH3 -> simCNC",
-    "window.title": "MACH3 -> simCNC - Profile check v0.1",
+    "window.title": "MACH3 -> simCNC - Profile check v{version}",
     "label.controller": "CSMIO model:",
     "label.language": "Language:",
+    "label.version": "Version {version}",
     "button.load_reference": "Load simCNC reference...",
     "placeholder.profile_path": "MACH3 profile (.xml or .txt)",
     "button.browse": "Browse...",

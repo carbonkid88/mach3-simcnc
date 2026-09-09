@@ -7,6 +7,7 @@ from .mapping import CONTROLLERS
 from .model import Status
 from .parser import parse_mach3
 from .simcnc import inspect_template
+from .version import APP_VERSION
 from .xmlio import ProfileError
 
 GROUPS = (
@@ -128,6 +129,8 @@ class MainWindow(QMainWindow):
         self.export_button = QPushButton()
         self.export_button.setEnabled(False)
         bottom.addWidget(self.export_button)
+        self.version_label = QLabel()
+        bottom.addWidget(self.version_label)
         layout.addLayout(bottom)
 
         self.retranslate_ui()
@@ -163,7 +166,7 @@ class MainWindow(QMainWindow):
         }
 
     def retranslate_ui(self):
-        self.setWindowTitle(self.i18n.t("window.title"))
+        self.setWindowTitle(self.i18n.t("window.title", version=APP_VERSION))
         self.controller_label.setText(self.i18n.t("label.controller"))
         self.language_label.setText(self.i18n.t("label.language"))
         self.reference_button.setText(self.i18n.t("button.load_reference"))
@@ -174,6 +177,7 @@ class MainWindow(QMainWindow):
         self.search.setPlaceholderText(self.i18n.t("placeholder.search"))
         self.check_button.setText(self.i18n.t("button.check"))
         self.export_button.setText(self.i18n.t("button.export_later"))
+        self.version_label.setText(self.i18n.t("label.version", version=APP_VERSION))
 
         for index, (group, key) in enumerate(GROUPS):
             self.tabs.setTabText(index, self.i18n.t(key))

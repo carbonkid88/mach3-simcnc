@@ -2,6 +2,7 @@ import unittest
 
 from converter.i18n import Translator
 from converter.model import Status
+from converter.version import APP_VERSION
 
 
 class TranslatorTests(unittest.TestCase):
@@ -17,6 +18,9 @@ class TranslatorTests(unittest.TestCase):
             Translator("en").warning(text),
             "Input25: active, but port/pin is missing or 0.",
         )
+
+    def test_window_title_contains_version(self):
+        self.assertIn(APP_VERSION, Translator("en").t("window.title", version=APP_VERSION))
 
 
 if __name__ == "__main__":

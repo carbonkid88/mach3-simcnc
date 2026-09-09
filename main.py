@@ -1,4 +1,5 @@
 import sys
+from converter.version import APP_VERSION
 
 
 def main():
@@ -12,6 +13,7 @@ def main():
         raise
     app = QApplication(sys.argv)
     app.setApplicationName("MACH3 -> simCNC")
+    app.setApplicationVersion(APP_VERSION)
     window = MainWindow()
     window.show()
     if len(sys.argv) > 1:

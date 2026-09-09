@@ -1,4 +1,4 @@
-# MACH3 → simCNC · Version 0.1
+# MACH3 → simCNC · Version 0.2.0
 
 Eigenständige Python-Anwendung mit PyQt5 zur Prüfung eines MACH3-Profils.
 Die erste Version liest Maschinenparameter und bereitet die Migration vor.
@@ -46,6 +46,13 @@ Eine neue Sprache wird so ergaenzt:
 2. Im Block `meta` den Sprachcode und Anzeigenamen anpassen.
 3. Die Werte in `messages` und `terms` uebersetzen; die Schluessel bleiben gleich.
 4. Tool neu starten. Die neue Sprache erscheint automatisch im Dropdown.
+
+## Versionierung
+
+Die Programmversion wird zentral in `converter/version.py` gepflegt.
+Das Tool zeigt diese Version im Fenstertitel und unten in der Bedienleiste an.
+Fuer neue sichtbare Funktionen die Minor-Version erhoehen, fuer reine
+Fehlerkorrekturen die Patch-Version.
 
 ## Daten und Status
 
@@ -123,7 +130,7 @@ dieses Projekt legt noch keine eigene Distributionslizenz fest.
 
 ---
 
-# MACH3 -> simCNC - Version 0.1
+# MACH3 -> simCNC - Version 0.2.0
 
 Standalone Python application with PyQt5 for checking a MACH3 profile.
 The first version reads machine parameters and prepares the migration.
@@ -171,6 +178,13 @@ A new language can be added as follows:
 2. Adjust the language code and display name in the `meta` block.
 3. Translate the values in `messages` and `terms`; keep the keys unchanged.
 4. Restart the tool. The new language appears automatically in the dropdown.
+
+## Versioning
+
+The application version is maintained centrally in `converter/version.py`.
+The tool displays this version in the window title and in the lower control bar.
+For new visible features, increase the minor version; for bug fixes only,
+increase the patch version.
 
 ## Data and Status
 
