@@ -6,6 +6,12 @@ The project follows semantic versioning while it is in early development:
 minor versions are used for visible features, patch versions for fixes and
 small behavior refinements.
 
+## 0.3.2
+
+- Add German and English explanatory tooltips for controls, comparison values,
+  table headers, missing values and expandable XML details.
+- Refresh tooltip text when switching languages or loading profiles.
+
 ## 0.3.1
 
 - Complete German/English comparison-view, spindle-parameter and module labels.

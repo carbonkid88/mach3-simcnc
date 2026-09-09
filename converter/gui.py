@@ -14,6 +14,7 @@ from .xmlio import ProfileError
 from .validation import validate
 from .preview import build_preview
 from .group_view import GroupView
+from .tooltips import explain_table, cell_tip
 
 GROUPS = (
     ("Achsen", "group.axes"),
@@ -44,7 +45,9 @@ def populate(widget, rows, status_colors=None):
     for r, row in enumerate(rows):
         for c, value in enumerate(row):
             item = QTableWidgetItem(str(value))
-            item.setToolTip(str(value))
+            hints = widget.property('columnHints') or []
+            item.setToolTip(cell_tip(hints[c], str(value), widget.property('emptyHint') or '')
+                            if c < len(hints) else str(value))
             if str(value) in status_colors:
                 item.setBackground(QColor(status_colors[str(value)]))
                 item.setForeground(QColor("#17202a"))
@@ -211,6 +214,13 @@ class MainWindow(QMainWindow):
         self.check_summary.setText(self.i18n.t("check.help"))
         self.export_button.setText(self.i18n.t("button.export_later"))
         self.version_label.setText(self.i18n.t("label.version", version=APP_VERSION))
+        for widget, key in ((self.controller, 'controller'), (self.language, 'language'),
+                            (self.reference_button, 'reference'), (self.path, 'path'),
+                            (self.browse_button, 'browse'), (self.search, 'search'),
+                            (self.check_button, 'check'), (self.export_button, 'export')):
+            widget.setToolTip(self.i18n.t('tooltip.' + key))
+        self.export_button.setAttribute(Qt.WA_AlwaysShowToolTips, True)
+        self.version_label.setToolTip(self.i18n.t('tooltip.export'))
 
         for index, (group, key) in enumerate(GROUPS):
             self.tabs.setTabText(index + 1, self.i18n.t(key))
@@ -238,6 +248,15 @@ class MainWindow(QMainWindow):
             self.refresh_status()
         if self.reference_rows:
             populate(self.reference_table, self.reference_rows)
+        for widget in self.tables.values():
+            explain_table(widget, self.i18n, ('component', 'parameter', 'field', 'raw', 'read', 'status', 'note'))
+        explain_table(self.mapping_table, self.i18n, ('component', 'field', 'raw', 'target', 'old', 'new', 'status', 'note'))
+        explain_table(self.reference_table, self.i18n, ('target', 'old'))
+        explain_table(self.status_table, self.i18n, ('status', 'note'))
+        explain_table(self.axis_overview, self.i18n, ('axis', 'active', 'target_axis', 'target_motor', 'status'))
+        explain_table(self.axis_details, self.i18n, ('parameter', 'raw', 'old', 'new', 'note'))
+        for view in self.group_views.values():
+            view.refresh_tooltips()
         self.filter_rows()
 
     def change_language(self):
@@ -412,7 +431,8 @@ class MainWindow(QMainWindow):
             state = self.i18n.t('overview.review') if matched else self.i18n.t('overview.open')
             for col, text in enumerate((label, self.display_value(active), target, kit_label, state)):
                 item = QTableWidgetItem(str(text))
-                item.setToolTip(str(text))
+                keys = ('axis', 'active', 'target_axis', 'target_motor', 'status')
+                item.setToolTip(self.i18n.t('tooltip.' + keys[col]) + '\n\n' + str(text))
                 self.axis_overview.setItem(index, col, item)
             self.axis_overview.setRowHeight(index, 30)
         self.axis_overview.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)

@@ -1,6 +1,7 @@
 """Human-readable source/target comparison with collapsed XML details."""
 import re
 from PyQt5.QtWidgets import QWidget, QVBoxLayout, QLabel, QComboBox, QTreeWidget, QTreeWidgetItem, QHeaderView
+from .tooltips import cell_tip
 
 
 NAMES = {
@@ -89,7 +90,14 @@ class GroupView(QWidget):
         self.tree.header().setSectionResizeMode(4, QHeaderView.Stretch)
         self.render()
 
+    def refresh_tooltips(self):
+        self.selector.setToolTip(self.t.t('tooltip.component'))
+        for col, key in enumerate(('relationship', 'raw', 'old', 'new', 'note')):
+            self.tree.headerItem().setToolTip(col, self.t.t('tooltip.' + key))
+        self.tree.setToolTip(self.t.t('tooltip.relationship'))
+
     def render(self):
+        self.refresh_tooltips()
         self.tree.clear()
         for p, proposal in self.entries:
             entity = self.entity(p)
@@ -112,9 +120,13 @@ class GroupView(QWidget):
                 continue
             item = QTreeWidgetItem(content)
             for c, value in enumerate(content):
-                item.setToolTip(c, value)
+                key = ('relationship', 'raw', 'old', 'new', 'note')[c]
+                item.setToolTip(c, cell_tip(self.t.t('tooltip.' + key), value, self.t.t('tooltip.empty')))
             self.tree.addTopLevelItem(item)
-            QTreeWidgetItem(item, [self.pair('XML-Details', 'XML details'), p.source, proposal.target if proposal else '', '', ''])
+            detail = QTreeWidgetItem(item, [self.pair('XML-Details', 'XML details'), p.source, proposal.target if proposal else '', '', ''])
+            detail.setToolTip(0, self.t.t('tooltip.xml'))
+            detail.setToolTip(1, self.t.t('tooltip.field') + '\n\n' + p.source)
+            detail.setToolTip(2, self.t.t('tooltip.target') + '\n\n' + (proposal.target if proposal else ''))
 
     def filter(self, query):
         self.query = query.casefold()

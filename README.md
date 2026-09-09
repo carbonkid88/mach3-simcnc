@@ -1,4 +1,4 @@
-# MACH3 → simCNC · Version 0.3.1
+# MACH3 → simCNC · Version 0.3.2
 
 Eigenständige Python-Anwendung mit PyQt5 zur Prüfung eines MACH3-Profils.
 Die Anwendung liest Maschinenparameter und zeigt eine vorläufige Zuordnung zur simCNC-Referenz.
@@ -6,7 +6,7 @@ Sie schreibt keine simCNC-Konfiguration und steuert keine Maschine.
 
 ## Neu: Zuordnung / Vorschau
 
-**Version 0.3.1:** Auch Achsen-Details, Homing/Limits, Spindel, Inputs und Outputs
+**Version 0.3.2:** Auch Achsen-Details, Homing/Limits, Spindel, Inputs und Outputs
 verwenden jetzt einen direkten Vergleich: **MACH3 → simCNC**, Quellwert,
 bisheriger Zielwert, geplanter Wert und Hinweis. Über die Auswahl oben lässt sich
 ein einzelner Motor, Eingang, Ausgang oder eine Riemenstufe anzeigen. Die Suche
@@ -113,6 +113,13 @@ Optional lässt sich eine Datei direkt öffnen:
 ```powershell
 .\.venv\Scripts\python.exe main.py "local_profiles\Mach3Mill.txt"
 ```
+
+## Erklärungen beim Überfahren mit der Maus
+
+Halte den Mauszeiger kurz über einen Button, ein Auswahlfeld, eine Tabellenüberschrift
+oder einen Vergleichswert. Ein Tooltip erklärt die Funktion beziehungsweise die
+Bedeutung des Werts. Die Erklärungen wechseln mit der gewählten Sprache zwischen
+Deutsch und Englisch. Aufgeklappte XML-Details behalten zusätzlich die Originalnamen.
 
 ## Bedienung
 
@@ -226,7 +233,13 @@ der Projektcode steht unter der MIT-Lizenz, siehe `LICENSE`.
 
 ---
 
-# MACH3 -> simCNC - Version 0.3.1
+# MACH3 -> simCNC - Version 0.3.2
+
+## Tooltips
+
+Hover over controls, table headers or comparison values for a short explanation.
+Tooltips follow the selected German/English interface language. Original XML names
+and values remain available for traceability.
 
 ## New in 0.3.0
 
