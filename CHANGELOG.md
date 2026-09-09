@@ -6,6 +6,23 @@ The project follows semantic versioning while it is in early development:
 minor versions are used for visible features, patch versions for fixes and
 small behavior refinements.
 
+## 0.3.1
+
+- Complete German/English comparison-view, spindle-parameter and module labels.
+- Route comparison-view translations through the shared locale catalogs.
+- Translate wrapped XML read errors while preserving original field names and values.
+- Add locale key and placeholder consistency checks.
+
+## 0.3.0
+
+- Add a source/target axis overview and provisional mapping preview using the
+  loaded simCNC reference and its MotionKit descriptors.
+- Add component selection and readable value comparisons for axes, homing,
+  spindle, inputs and outputs, with collapsed XML details.
+- Make source checks visible and report open mappings separately.
+- Keep ambiguous assignments, unsupported IP-A tuning and unknown I/O roles open.
+- Update German/English documentation. File export remains unimplemented.
+
 ## 0.2.1
 
 - Use real German umlauts in the German UI catalog.

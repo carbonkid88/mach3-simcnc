@@ -1,4 +1,6 @@
 from PyQt5.QtGui import QColor
+from PyQt5.QtCore import Qt
+import re
 from PyQt5.QtWidgets import (QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
     QLabel, QComboBox, QPushButton, QLineEdit, QFileDialog, QTabWidget,
     QTableWidget, QTableWidgetItem, QAbstractItemView, QHeaderView, QMessageBox)
@@ -9,6 +11,9 @@ from .parser import parse_mach3
 from .simcnc import inspect_template
 from .version import APP_VERSION
 from .xmlio import ProfileError
+from .validation import validate
+from .preview import build_preview
+from .group_view import GroupView
 
 GROUPS = (
     ("Achsen", "group.axes"),
@@ -55,6 +60,7 @@ class MainWindow(QMainWindow):
         super().__init__()
         self.profile = None
         self.reference_rows = []
+        self.proposals = []
         self.i18n = Translator()
         self.languages = Translator.available_languages()
 
@@ -102,20 +108,48 @@ class MainWindow(QMainWindow):
         self.legend.setWordWrap(True)
         layout.addWidget(self.legend)
 
+        self.check_summary = QLabel()
+        self.check_summary.setWordWrap(True)
+        layout.addWidget(self.check_summary)
+
         self.search = QLineEdit()
         self.search.textChanged.connect(self.filter_rows)
         layout.addWidget(self.search)
 
         self.tabs = QTabWidget()
         self.tables = {}
+        self.group_views = {}
         for group, _ in GROUPS:
             widget = table(self.parameter_headers())
             self.tables[group] = widget
-            self.tabs.addTab(widget, "")
+            if group != 'Weitere Felder':
+                view = GroupView(self.i18n)
+                self.group_views[group] = view
+                self.tabs.addTab(view, '')
+            else:
+                self.tabs.addTab(widget, "")
         self.status_table = table(self.status_headers())
         self.tabs.addTab(self.status_table, "")
         self.reference_table = table(self.reference_headers())
         self.tabs.addTab(self.reference_table, "")
+        self.mapping_table = table([""] * 8)
+        self.tabs.addTab(self.mapping_table, "")
+        self.overview = QWidget()
+        overview_layout = QVBoxLayout(self.overview)
+        self.overview_help = QLabel()
+        self.overview_help.setWordWrap(True)
+        overview_layout.addWidget(self.overview_help)
+        self.axis_overview = table([''] * 5)
+        self.axis_overview.setFixedHeight(245)
+        self.axis_overview.setStyleSheet('QTableWidget::item:selected { background: #dbeafe; color: #17202a; }')
+        self.axis_overview.setSelectionMode(QAbstractItemView.SingleSelection)
+        self.axis_overview.itemSelectionChanged.connect(self.show_axis_details)
+        overview_layout.addWidget(self.axis_overview)
+        self.axis_title = QLabel()
+        overview_layout.addWidget(self.axis_title)
+        self.axis_details = table([''] * 5)
+        overview_layout.addWidget(self.axis_details)
+        self.tabs.insertTab(0, self.overview, '')
         layout.addWidget(self.tabs)
 
         bottom = QHBoxLayout()
@@ -172,16 +206,29 @@ class MainWindow(QMainWindow):
         self.legend.setText(self.i18n.t("legend"))
         self.search.setPlaceholderText(self.i18n.t("placeholder.search"))
         self.check_button.setText(self.i18n.t("button.check"))
+        self.check_button.setEnabled(self.profile is not None)
+        self.check_button.setToolTip(self.i18n.t("check.help"))
+        self.check_summary.setText(self.i18n.t("check.help"))
         self.export_button.setText(self.i18n.t("button.export_later"))
         self.version_label.setText(self.i18n.t("label.version", version=APP_VERSION))
 
         for index, (group, key) in enumerate(GROUPS):
-            self.tabs.setTabText(index, self.i18n.t(key))
+            self.tabs.setTabText(index + 1, self.i18n.t(key))
             self.tables[group].setHorizontalHeaderLabels(self.parameter_headers())
         self.status_table.setHorizontalHeaderLabels(self.status_headers())
         self.reference_table.setHorizontalHeaderLabels(self.reference_headers())
-        self.tabs.setTabText(len(GROUPS), self.i18n.t("tab.status"))
-        self.tabs.setTabText(len(GROUPS) + 1, self.i18n.t("tab.reference"))
+        self.tabs.setTabText(len(GROUPS) + 1, self.i18n.t("tab.status"))
+        self.tabs.setTabText(len(GROUPS) + 2, self.i18n.t("tab.reference"))
+        self.tabs.setTabText(len(GROUPS) + 3, self.i18n.t("preview.tab"))
+        self.tabs.setTabText(0, self.i18n.t('overview.tab'))
+        self.overview_help.setText(self.i18n.t('overview.help'))
+        self.axis_overview.setHorizontalHeaderLabels([self.i18n.t('overview.' + k)
+            for k in ('source', 'active', 'target', 'motor', 'status')])
+        self.axis_details.setHorizontalHeaderLabels([self.i18n.t('overview.' + k)
+            for k in ('parameter', 'mach3', 'old', 'new', 'note')])
+        self.mapping_table.setHorizontalHeaderLabels([self.i18n.t(k) for k in (
+            'table.component', 'table.mach3_field', 'table.raw_value', 'preview.target',
+            'table.original_value', 'preview.new', 'table.status', 'table.note')])
 
         if self.profile is None:
             self.summary.setText(self.i18n.t("summary.empty"))
@@ -214,10 +261,14 @@ class MainWindow(QMainWindow):
             QMessageBox.warning(self, self.i18n.t("dialog.profile_error"), self.i18n.term(str(exc)))
             return False
         self.profile = profile
+        self.check_button.setEnabled(True)
         self.path.setText(str(profile.path))
         self.populate_profile_tables()
         self.refresh_summary()
         self.refresh_status()
+        if self.reference_rows:
+            self.search.clear()
+            self.tabs.setCurrentWidget(self.overview)
         self.filter_rows()
         return True
 
@@ -260,10 +311,33 @@ class MainWindow(QMainWindow):
         if self.profile is None:
             return
         plan = CONTROLLERS[self.controller.currentText()].plan(self.profile)
-        populate(self.status_table, [
-            (self.i18n.t("button.check"), self.i18n.warning(w))
-            for w in plan.warnings
-        ])
+        self.proposals = build_preview(self.profile, self.reference_rows, self.controller.currentText())
+        for group, view in self.group_views.items():
+            view.update_entries([p for p in self.profile.parameters if p.group == group], self.proposals)
+        self.refresh_axis_overview()
+        populate(self.mapping_table, [(self.i18n.term(p.group), p.source, p.raw,
+            p.target or '—', p.old if p.target else '—', p.new or '—',
+            self.i18n.t('preview.' + p.state), self.i18n.t('preview.reason.' + p.reason))
+            for p in self.proposals], {self.i18n.t('preview.candidate'): '#fff0c2',
+                                      self.i18n.t('preview.open'): '#f4dada'})
+        checks = validate(self.profile, self.reference_rows)
+        rows = [(self.i18n.t("check." + c.level), self.i18n.t(c.key, **c.values)) for c in checks]
+        rows.extend((self.i18n.t("check.open"), self.i18n.warning(w)) for w in plan.warnings)
+        rows.append((self.i18n.t('check.open'), self.i18n.t('preview.summary',
+            candidates=sum(p.state == 'candidate' for p in self.proposals),
+            pending=sum(p.state == 'open' for p in self.proposals))))
+        populate(self.status_table, rows, {
+            self.i18n.t("check.ok"): "#d9efdf",
+            self.i18n.t("check.error"): "#f4dada",
+            self.i18n.t("check.open"): "#fff0c2",
+        })
+        self.check_summary.setText(self.i18n.t("check.result",
+            ok=sum(c.level == "ok" for c in checks),
+            errors=sum(c.level == "error" for c in checks),
+            pending=sum(c.level == "open" for c in checks) + len(plan.warnings)) + '\n' +
+            self.i18n.t('preview.summary',
+                candidates=sum(p.state == 'candidate' for p in self.proposals),
+                pending=sum(p.state == 'open' for p in self.proposals)))
         self.statusBar().showMessage(self.i18n.t(
             "statusbar.ready",
             controller=plan.controller,
@@ -271,8 +345,14 @@ class MainWindow(QMainWindow):
         self.filter_rows()
 
     def check_profile(self):
+        if self.profile is None:
+            return
+        self.search.clear()
         self.refresh_status()
         self.tabs.setCurrentWidget(self.status_table)
+        self.status_table.scrollToTop()
+        QMessageBox.information(self, self.i18n.t("check.title"),
+            self.check_summary.text() + "\n\n" + self.i18n.t("check.export_pending"))
 
     def choose_reference(self):
         path, _ = QFileDialog.getOpenFileName(
@@ -291,15 +371,82 @@ class MainWindow(QMainWindow):
             QMessageBox.warning(self, self.i18n.t("dialog.reference_error"), self.i18n.term(str(exc)))
             return False
         self.reference_rows = rows
+        self.refresh_status()
         populate(self.reference_table, self.reference_rows)
         self.reference_table.setToolTip(str(path))
-        self.tabs.setCurrentWidget(self.reference_table)
+        self.search.clear()
+        self.tabs.setCurrentWidget(self.overview if self.profile else self.reference_table)
         self.filter_rows()
         return True
 
+    def refresh_axis_overview(self):
+        selected = self.axis_overview.currentRow()
+        self.axis_overview.blockSignals(True)
+        self.axis_overview.setSortingEnabled(False)
+        self.axis_overview.setRowCount(7)
+        self.axis_sources = []
+        self.axis_labels = []
+        for index, axis in enumerate('XYZABC' + '?'):
+            motor = self.profile.get(f'AxisToMotor{index}') if index < 6 else 6
+            valid = (isinstance(motor, (int, float)) and not isinstance(motor, bool)
+                     and motor in range(6)) if index < 6 else True
+            motor = int(motor) if valid else None
+            sources = [p for p in self.proposals if motor is not None and (
+                re.fullmatch(rf'Motor{motor}(?!\d).*', p.source) or
+                re.fullmatch(rf'(Vel|Acc|Steps|RefSpeed){motor}', p.source) or
+                re.fullmatch(rf'M{motor}(?!\d).*', p.source))]
+            self.axis_sources.append(sources)
+            label = f'MACH3 {axis}' if index < 6 else 'Motor6 · Aux/Spindle/Other'
+            if index < 6 and motor is not None:
+                label += f' · Motor{motor}'
+            self.axis_labels.append(label)
+            active = self.profile.get(f'Motor{motor}Active') if motor is not None else None
+            enable = next((p for p in sources if p.source == f'Motor{motor}Active'), None)
+            matched = bool(enable and enable.old in ('true', 'false') and enable.target)
+            target = f'→ simCNC {axis}' if matched and index < 6 else self.i18n.t('overview.open')
+            kits = {re.search(r'/modules/([^/]+)/motionKits/motionKit_(\d+)/', p.target).groups()
+                    for p in sources if re.search(r'/modules/([^/]+)/motionKits/motionKit_(\d+)/', p.target)
+                    and p.reason not in ('target_missing', 'target_duplicate', 'reference')}
+            kit = next(iter(kits)) if len(kits) == 1 else None
+            kit_label = f'Motor{kit[1]} · ' + kit[0].replace('module', self.i18n.term('Modul') + ' ').rstrip('_') if kit else self.i18n.t('overview.open')
+            state = self.i18n.t('overview.review') if matched else self.i18n.t('overview.open')
+            for col, text in enumerate((label, self.display_value(active), target, kit_label, state)):
+                item = QTableWidgetItem(str(text))
+                item.setToolTip(str(text))
+                self.axis_overview.setItem(index, col, item)
+            self.axis_overview.setRowHeight(index, 30)
+        self.axis_overview.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        self.axis_overview.blockSignals(False)
+        self.axis_overview.selectRow(selected if 0 <= selected < 7 else 0)
+        self.show_axis_details()
+
+    def show_axis_details(self):
+        row = self.axis_overview.currentRow()
+        if row < 0 or not hasattr(self, 'axis_sources'):
+            return
+        self.axis_title.setText(self.axis_labels[row] + ' — ' + self.i18n.t('overview.values'))
+        details = []
+        for p in self.axis_sources[row]:
+            if re.fullmatch(r'Motor\d+(Active|DirNeg|StepNeg)|(?:Vel|Acc|Steps|RefSpeed)\d+|M\d+(Min|Max)', p.source):
+                name = re.sub(r'\d+', '', p.source)
+                details.append((self.i18n.t('overview.field.' + name), p.raw, p.old or '—',
+                                p.new or '—', self.i18n.t('preview.reason.' + p.reason)))
+        priority = [self.i18n.t('overview.field.' + key) for key in
+                    ('MotorActive', 'Vel', 'Acc', 'Steps', 'MMin', 'MMax', 'RefSpeed', 'MotorDirNeg', 'MotorStepNeg')]
+        details.sort(key=lambda item: priority.index(item[0]))
+        self.axis_details.horizontalHeader().setSortIndicator(-1, Qt.AscendingOrder)
+        populate(self.axis_details, details)
+        self.axis_details.horizontalHeader().setSectionResizeMode(QHeaderView.Interactive)
+        for col, width in enumerate((170, 115, 115, 130)):
+            self.axis_details.setColumnWidth(col, width)
+        self.axis_details.horizontalHeader().setSectionResizeMode(4, QHeaderView.Stretch)
+        self.axis_details.resizeRowsToContents()
+
     def filter_rows(self):
         query = self.search.text().casefold()
-        for widget in [*self.tables.values(), self.status_table, self.reference_table]:
+        for view in self.group_views.values():
+            view.filter(query)
+        for widget in [*self.tables.values(), self.status_table, self.reference_table, self.mapping_table]:
             for row in range(widget.rowCount()):
                 visible = any(query in widget.item(row, c).text().casefold()
                               for c in range(widget.columnCount()) if widget.item(row, c))

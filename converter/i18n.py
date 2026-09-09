@@ -53,6 +53,9 @@ class Translator:
             return text
 
     def term(self, text):
+        prefix = 'Datei konnte nicht gelesen werden: '
+        if text.startswith(prefix):
+            return self.t('error.read_prefix', detail=self.term(text[len(prefix):]))
         return self._messages.get("terms", {}).get(
             text,
             self._fallback.get("terms", {}).get(text, text),

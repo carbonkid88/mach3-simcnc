@@ -1,8 +1,54 @@
-# MACH3 → simCNC · Version 0.2.1
+# MACH3 → simCNC · Version 0.3.1
 
 Eigenständige Python-Anwendung mit PyQt5 zur Prüfung eines MACH3-Profils.
-Die erste Version liest Maschinenparameter und bereitet die Migration vor.
+Die Anwendung liest Maschinenparameter und zeigt eine vorläufige Zuordnung zur simCNC-Referenz.
 Sie schreibt keine simCNC-Konfiguration und steuert keine Maschine.
+
+## Neu: Zuordnung / Vorschau
+
+**Version 0.3.1:** Auch Achsen-Details, Homing/Limits, Spindel, Inputs und Outputs
+verwenden jetzt einen direkten Vergleich: **MACH3 → simCNC**, Quellwert,
+bisheriger Zielwert, geplanter Wert und Hinweis. Über die Auswahl oben lässt sich
+ein einzelner Motor, Eingang, Ausgang oder eine Riemenstufe anzeigen. Die Suche
+berücksichtigt Namen, Werte und XML-Felder. XML-Feldnamen und Zielpfade stehen
+in eingeklappten Details unter jeder Zeile.
+
+Ein- und Ausgänge werden anhand ihrer Quell-ID bezeichnet, solange die
+Signalrolle unbekannt ist. Eine Bezeichnung wie „Eingang 2“ bestätigt daher
+noch keine Funktion als Home-Schalter. Fehlende Zuordnungen bleiben „Noch offen“.
+Unbekannte Parameternamen können weiterhin als Originalfeldname erscheinen.
+
+Die Startansicht **Achsen-Zuordnung** zeigt eine Zeile pro MACH3-Achse mit
+Quellmotor, Aktivierung, simCNC-Zielachse und Zielmotor. X ist standardmäßig
+ausgewählt. Ein Klick auf eine andere Achse zeigt darunter deren Wertevergleich
+mit verständlichen Einstellungsnamen. Motor6 bleibt separat. Fehlende
+Motorverknüpfungen werden als offen angezeigt. Die ausführlichen XML-Pfade
+stehen weiterhin unter **Zuordnung / Vorschau**.
+
+Nach dem Laden beider Dateien öffnet sich automatisch **Achsen-Zuordnung**,
+unabhängig von der Ladereihenfolge. Eine vorhandene simCNC-Konfiguration genügt;
+eine leere Vorlage ist für die Vorschau nicht notwendig. Die Tabelle zeigt
+MACH3-Feld und Rohwert, den vorgeschlagenen vollständigen simCNC-Pfad, den
+Originalwert der Referenz, den vorläufigen neuen Wert und die Begründung.
+
+Die Regeln in `converter/preview.py` verfolgen `AxisToMotorN` und den tatsächlichen
+MotionKit-Deskriptor der Zielachse. Nur Pfade unter `/Engine/device` werden als
+Ziele berücksichtigt, niemals die parallel vorhandenen `defaultValues`.
+Fehlende, doppelte oder mehrdeutige Zuordnungen bleiben offen. Motor6 wird nicht
+automatisch einer Achse zugewiesen. Modellwechsel aktualisieren die Vorschau;
+IP-A erhält keine automatischen Step/Dir- oder Tuningwertvorschläge.
+
+Aktuell gibt es Vorschläge für Aktivierung, Steps, Geschwindigkeit,
+Beschleunigung, Step-Polarität und Min-/Max-Grenzen. Zahlenvorschläge gelten
+ausdrücklich nur unter der Annahme identischer Einheiten und Skalierungen.
+Sie sind noch nicht bestätigt oder exportierbar. Bei Richtung,
+Referenzgeschwindigkeit und Gangwahl wird zunächst nur ein Zielkandidat gezeigt.
+I/O- und übrige Spindelfelder bleiben mit Begründung offen. Die Tabelle ist
+schreibgeschützt; eine manuelle Zuordnungsbearbeitung und der Export folgen später.
+Felder aus „Weitere Felder“ bleiben in ihrem bisherigen Tab einsehbar.
+
+„Konfiguration prüfen“ enthält zusätzlich die Anzahl der Vorschläge und offenen
+Zuordnungen. Es werden weder MACH3- noch simCNC-Dateien verändert.
 
 > Frühes Community-Validierungstool: migrierte Werte niemals ohne manuelle
 > Prüfung an einer realen Maschine verwenden.
@@ -72,19 +118,23 @@ Optional lässt sich eine Datei direkt öffnen:
 
 1. CSMIO/IP-M, CSMIO/IP-S oder CSMIO/IP-A auswählen.
 2. Mit „Durchsuchen“ ein MACH3-Profil laden oder Pfad eingeben und Enter drücken.
-3. Tabellen für Achsen, Homing/Limits, Spindel, Inputs und Outputs prüfen.
-4. „Weitere Felder“ enthält alle übrigen direkten Preferences-Felder.
-5. „Prüfen“ öffnet Status/Warnungen. Ein Modellwechsel berechnet die Hinweise neu.
-6. Optional `config.txt` als simCNC-Referenz laden; vollständige XML-Blattpfade
-   und Werte erscheinen in einem separaten Tab.
+3. Eine simCNC-Referenz laden. Die Achsen-Zuordnung öffnet sich automatisch.
+4. Eine Achse anklicken oder in den anderen Bereichen eine Komponente auswählen.
+   Quellwert, bisheriger Zielwert und geplanter Wert stehen nebeneinander.
+5. Zeilen bei Bedarf für XML-Details aufklappen. „Weitere Felder“ enthält die
+   übrigen direkten Preferences-Felder ohne bestätigte Zuordnung.
+6. „Konfiguration prüfen“ zeigt Prüfergebnis und offene Punkte. Ein Modellwechsel
+   berechnet Vorschläge und Hinweise neu.
 
-Die Tabellen sind bewusst schreibgeschützt, sortierbar und durchsuchbar.
+Die Ansichten sind schreibgeschützt und durchsuchbar; die XML-Tabellen sind sortierbar.
 Spaltenbreiten lassen sich anpassen; Tooltips zeigen vollständige Zellinhalte.
 Bei einem Ladefehler bleibt das zuletzt erfolgreich geladene Profil sichtbar.
 
 ## Sprachen
 
-Die Oberflaeche laedt ihre Texte aus JSON-Dateien in `converter/locales/`.
+Die Oberfläche lädt ihre Übersetzungen einschließlich der Vergleichsansichten aus
+JSON-Dateien in `converter/locales/`. Originale XML-Feldnamen, Pfade und Rohwerte
+bleiben unverändert. Unbekannte Erweiterungsfelder erscheinen mit ihrem Originalnamen.
 Im Tool kann die Sprache ueber das Dropdown `Sprache` gewechselt werden.
 Eine neue Sprache wird so ergaenzt:
 
@@ -176,7 +226,19 @@ der Projektcode steht unter der MIT-Lizenz, siehe `LICENSE`.
 
 ---
 
-# MACH3 -> simCNC - Version 0.2.1
+# MACH3 -> simCNC - Version 0.3.1
+
+## New in 0.3.0
+
+The axis overview shows the proposed source-axis/motor to target-axis/motor
+relationship. Axis details, Homing/Limits, Spindle, Inputs and Outputs now show
+MACH3 → simCNC, source value, current target value, provisional new value and
+the reason for any open mapping. Select a motor, input, output or pulley using
+the component selector. Expand a row to inspect XML fields and target paths.
+Search includes names, values and XML fields. Unknown signal roles are kept
+open; input/output numbers remain source IDs, not confirmed hardware functions.
+The preview is read-only: editing mappings and writing a simCNC file are not yet
+implemented. Numeric proposals still require confirmed units and scaling.
 
 Standalone Python application with PyQt5 for checking a MACH3 profile.
 The first version reads machine parameters and prepares the migration.
