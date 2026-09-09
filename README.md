@@ -1,8 +1,23 @@
 # MACH3 → simCNC · Version 0.3.2
 
-Eigenständige Python-Anwendung mit PyQt5 zur Prüfung eines MACH3-Profils.
-Die Anwendung liest Maschinenparameter und zeigt eine vorläufige Zuordnung zur simCNC-Referenz.
-Sie schreibt keine simCNC-Konfiguration und steuert keine Maschine.
+## Ziel des Tools
+
+Das Ziel ist, aus einer vorhandenen **MACH3-Maschinenkonfiguration eine
+simCNC-Maschinenkonfiguration zu erstellen**, damit der Umstieg von MACH3 auf
+simCNC einfacher wird und Einstellungen nicht vollständig von Hand übertragen
+werden müssen.
+
+Dazu soll das Tool Achsparameter, Homing und Limits, Spindeleinstellungen sowie
+Ein- und Ausgänge aus dem MACH3-Profil einlesen, nachvollziehbar den passenden
+simCNC-Einstellungen zuordnen und nach Prüfung als neue simCNC-Konfiguration
+ausgeben. Unklare Zuordnungen und notwendige Umrechnungen sollen vor dem Export
+sichtbar sein und geklärt werden können. Der Fokus liegt auf der
+Maschinenkonfiguration; eine Konvertierung von Makros oder Screens ist nicht vorgesehen.
+
+**Aktueller Stand:** Die eigenständige Python-Anwendung mit PyQt5 liest die
+Quelldaten und zeigt eine vorläufige Zuordnung zu einer simCNC-Referenz.
+Der Export einer neuen simCNC-Konfiguration ist noch nicht implementiert.
+Das Tool steuert keine Maschine.
 
 ## Neu: Zuordnung / Vorschau
 
@@ -234,6 +249,22 @@ der Projektcode steht unter der MIT-Lizenz, siehe `LICENSE`.
 ---
 
 # MACH3 -> simCNC - Version 0.3.2
+
+## Purpose of the Tool
+
+The goal is to **create a simCNC machine configuration from an existing MACH3
+machine configuration**, making the transition from MACH3 to simCNC easier and
+reducing the need to transfer settings manually.
+
+The tool is intended to read axis parameters, homing and limits, spindle settings,
+and inputs/outputs from a MACH3 profile, show how they map to simCNC settings,
+and generate a new simCNC configuration after review. Ambiguous mappings and
+required conversions should be visible and resolved before export. The scope is
+machine configuration; converting macros or screens is not planned.
+
+**Current status:** The application reads source data and displays provisional
+mappings against a simCNC reference. Exporting a new simCNC configuration is not
+implemented yet. The tool does not control a machine.
 
 ## Tooltips
 
