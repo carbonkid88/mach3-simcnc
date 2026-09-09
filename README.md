@@ -36,6 +36,17 @@ Die Tabellen sind bewusst schreibgeschützt, sortierbar und durchsuchbar.
 Spaltenbreiten lassen sich anpassen; Tooltips zeigen vollständige Zellinhalte.
 Bei einem Ladefehler bleibt das zuletzt erfolgreich geladene Profil sichtbar.
 
+## Sprachen
+
+Die Oberflaeche laedt ihre Texte aus JSON-Dateien in `converter/locales/`.
+Im Tool kann die Sprache ueber das Dropdown `Sprache` gewechselt werden.
+Eine neue Sprache wird so ergaenzt:
+
+1. `converter/locales/de.json` kopieren, zum Beispiel als `fr.json`.
+2. Im Block `meta` den Sprachcode und Anzeigenamen anpassen.
+3. Die Werte in `messages` und `terms` uebersetzen; die Schluessel bleiben gleich.
+4. Tool neu starten. Die neue Sprache erscheint automatisch im Dropdown.
+
 ## Daten und Status
 
 - **Übernommen:** Rohwert erfolgreich ins interne Modell eingelesen; keine
@@ -109,3 +120,128 @@ Zum Veröffentlichen zuerst `git init`, dann die Dateien prüfen und committen.
 Die `.gitignore` schließt Profile, virtuelle Umgebung und Build-Dateien aus.
 PyQt5-Lizenzbedingungen sind für die spätere Distribution gesondert zu prüfen;
 dieses Projekt legt noch keine eigene Distributionslizenz fest.
+
+---
+
+# MACH3 -> simCNC - Version 0.1
+
+Standalone Python application with PyQt5 for checking a MACH3 profile.
+The first version reads machine parameters and prepares the migration.
+It does not write a simCNC configuration and does not control a machine.
+
+## Starting on Windows / VSCode
+
+Use Python 3.10 or newer with PyQt5. Open this project folder in VSCode
+and run the following commands in the terminal:
+
+```powershell
+py -m venv .venv
+.\.venv\Scripts\python.exe -m pip install -r requirements.txt
+.\.venv\Scripts\python.exe main.py
+```
+
+In VSCode, select the `.venv` via "Python: Select Interpreter".
+Optionally, a file can be opened directly:
+
+```powershell
+.\.venv\Scripts\python.exe main.py "local_profiles\Mach3Mill.txt"
+```
+
+## Usage
+
+1. Select CSMIO/IP-M, CSMIO/IP-S, or CSMIO/IP-A.
+2. Load a MACH3 profile with "Browse", or enter a path and choose "Load".
+3. Check the tables for axes, homing/limits, spindle, inputs, and outputs.
+4. "Other fields" contains all remaining direct Preferences fields.
+5. "Check" opens status/warnings. Changing the model recalculates the notes.
+6. Optionally load `config.txt` as a simCNC reference; full XML leaf paths
+   and values appear in a separate tab.
+
+The tables are intentionally read-only, sortable, and searchable.
+Column widths can be adjusted; tooltips show full cell contents.
+If loading fails, the last successfully loaded profile remains visible.
+
+## Languages
+
+The user interface loads its texts from JSON files in `converter/locales/`.
+The language can be changed in the tool via the `Language` dropdown.
+A new language can be added as follows:
+
+1. Copy `converter/locales/de.json`, for example as `fr.json`.
+2. Adjust the language code and display name in the `meta` block.
+3. Translate the values in `messages` and `terms`; keep the keys unchanged.
+4. Restart the tool. The new language appears automatically in the dropdown.
+
+## Data and Status
+
+- **Copied:** raw value successfully read into the internal model; no statement
+  about a confirmed simCNC target field.
+- **Interpreted:** for example, `0/1` converted for display as `No/Yes`.
+- **Unknown:** unmapped, missing, invalid, or present more than once.
+
+`Motor0...5` are labeled X/Y/Z/A/B/C in the view. The actual
+`AxisToMotorN` fields remain visible and must be considered before an export;
+the display is not yet a confirmed kinematic mapping.
+Motor6 and additional motors appear separately as **Aux/Spindle/Other**.
+Missing axis activation fields are unknown, not automatically inactive.
+
+The parser processes the names that are actually present, including
+`Motor0Active`, `Motor0DirNeg/DirPort/DirPin/StepNeg/StepPort/StepPin`,
+`VelN`, `AccN`, `StepsN`, `InputNActive/Port/Pin/Neg/Emulated/EmuKey`,
+`OutputNActive/Port/Pin/Neg`, `PWM`, `PWMBase`, `PWMin`, `SPEEDN`,
+`SPINRATION`, `SPINREVN`, `PULLEY`, `SpinCW/SpinCCW`, `Flood/Mist`,
+`RefSpeedN`, `MNMin/Max/Neg/Rev/AutoZero/RefHome/SoftRamp`, and `SoftLimit`.
+Here, N is an index; letter case follows the source profile.
+
+**No blanket division of Vel by 60:** the XML raw values and their units must
+be confirmed based on the specific profile/plugin configuration. `Units`,
+rotary axes, reference speed, signal numbers, and port/pin values have not yet
+been converted into simCNC settings at domain level. In particular, `Output7`
+does not automatically mean "Output #7" or a specific hardware terminal.
+No guessed pin mappings are generated.
+
+XML is detected by its content, independently of `.txt` or `.xml`.
+UTF-8/BOM, UTF-16, and XML encoding declarations are handled by the XML parser.
+Malformed XML, DTD/entities, and files larger than 16 MiB are rejected.
+Invalid numbers, empty relevant numeric fields, and duplicate Preferences keys
+are visibly marked. Raw values are preserved.
+
+## Project Structure and Extension
+
+```text
+main.py                 Entry point
+converter/model.py      Neutral model with source, raw value, and status
+converter/xmlio.py      Shared XML reading and error handling
+converter/parser.py     MACH3 fields -> parameter groups
+converter/mapping.py    Separate strategies and check plan per CSMIO model
+converter/simcnc.py     Reference inspection and exporter interface
+converter/gui.py        PyQt5 view
+tests/test_parser.py    Parser and reference tests
+local_profiles/         Local original files, excluded from Git
+```
+
+The model strategies are extension points, not finished hardware adapters.
+Every plan remains `ready_for_export=False`. As the next step, each model needs
+confirmed channels, units, and signal mappings. After that, an exporter can
+modify a copy of a suitable simCNC template in a targeted way, preserve untouched
+areas, and validate the result. Jerk, analog spindle, homing, and safety
+functions explicitly require verified target values.
+Macros, screens, and tool data are not migrated.
+
+## Reference Files and Tests
+
+The provided originals are stored locally in `local_profiles/`; they are not
+part of a later Git commit. The MACH3 sample contains four active axes X-A plus
+Motor6, five active inputs, and four active outputs.
+The simCNC template uses `Engine` as its root and includes, among others,
+`axis_0/posLimitEnable`, `posLimitPlus`, `posLimitMinus`, `homingSpeed`,
+`homingDirection`, and nested I/O descriptors.
+
+```powershell
+.\.venv\Scripts\python.exe -m unittest discover -s tests -v
+```
+
+Before publishing, run `git init`, then review and commit the files.
+The `.gitignore` excludes profiles, the virtual environment, and build files.
+PyQt5 license terms must be checked separately for later distribution;
+this project does not define its own distribution license yet.

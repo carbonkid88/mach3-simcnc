@@ -11,7 +11,7 @@ def main():
             return 1
         raise
     app = QApplication(sys.argv)
-    app.setApplicationName("MACH3 → simCNC")
+    app.setApplicationName("MACH3 -> simCNC")
     window = MainWindow()
     window.show()
     if len(sys.argv) > 1:

@@ -1,15 +1,22 @@
-from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QColor
 from PyQt5.QtWidgets import (QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
     QLabel, QComboBox, QPushButton, QLineEdit, QFileDialog, QTabWidget,
     QTableWidget, QTableWidgetItem, QAbstractItemView, QHeaderView, QMessageBox)
+from .i18n import Translator
 from .mapping import CONTROLLERS
 from .model import Status
 from .parser import parse_mach3
 from .simcnc import inspect_template
 from .xmlio import ProfileError
 
-GROUPS = ("Achsen", "Homing/Limits", "Spindel", "Inputs", "Outputs", "Weitere Felder")
+GROUPS = (
+    ("Achsen", "group.axes"),
+    ("Homing/Limits", "group.homing_limits"),
+    ("Spindel", "group.spindle"),
+    ("Inputs", "group.inputs"),
+    ("Outputs", "group.outputs"),
+    ("Weitere Felder", "group.other"),
+)
 
 
 def table(headers):
@@ -24,17 +31,16 @@ def table(headers):
     return widget
 
 
-def populate(widget, rows):
+def populate(widget, rows, status_colors=None):
     widget.setSortingEnabled(False)
     widget.setRowCount(len(rows))
-    colors = {Status.COPIED.value: "#d9efdf", Status.INTERPRETED.value: "#fff0c2",
-              Status.UNKNOWN.value: "#f4dada"}
+    status_colors = status_colors or {}
     for r, row in enumerate(rows):
         for c, value in enumerate(row):
             item = QTableWidgetItem(str(value))
             item.setToolTip(str(value))
-            if str(value) in colors:
-                item.setBackground(QColor(colors[str(value)]))
+            if str(value) in status_colors:
+                item.setBackground(QColor(status_colors[str(value)]))
                 item.setForeground(QColor("#17202a"))
             widget.setItem(r, c, item)
     widget.resizeColumnsToContents()
@@ -47,68 +53,157 @@ class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.profile = None
-        self.setWindowTitle("MACH3 → simCNC · Profilprüfung v0.1")
+        self.reference_rows = []
+        self.i18n = Translator()
+        self.languages = Translator.available_languages()
+
         self.resize(1250, 780)
         body = QWidget()
         self.setCentralWidget(body)
         layout = QVBoxLayout(body)
+
         top = QHBoxLayout()
-        top.addWidget(QLabel("CSMIO-Modell:"))
+        self.controller_label = QLabel()
+        top.addWidget(self.controller_label)
         self.controller = QComboBox()
         self.controller.addItems(CONTROLLERS)
         self.controller.currentTextChanged.connect(self.refresh_status)
         top.addWidget(self.controller)
+
         top.addStretch()
-        reference = QPushButton("simCNC-Referenz laden…")
-        reference.clicked.connect(self.choose_reference)
-        top.addWidget(reference)
+        self.language_label = QLabel()
+        top.addWidget(self.language_label)
+        self.language = QComboBox()
+        for code, name in self.languages:
+            self.language.addItem(name, code)
+        self.language.currentIndexChanged.connect(self.change_language)
+        top.addWidget(self.language)
+
+        self.reference_button = QPushButton()
+        self.reference_button.clicked.connect(self.choose_reference)
+        top.addWidget(self.reference_button)
         layout.addLayout(top)
+
         path_row = QHBoxLayout()
         self.path = QLineEdit()
-        self.path.setPlaceholderText("MACH3-Profil (.xml oder .txt)")
-        browse = QPushButton("Durchsuchen…")
-        browse.clicked.connect(self.choose_profile)
-        load = QPushButton("Einlesen")
-        load.clicked.connect(lambda: self.load_profile(self.path.text()))
-        self.path.returnPressed.connect(load.click)
+        self.browse_button = QPushButton()
+        self.browse_button.clicked.connect(self.choose_profile)
+        self.load_button = QPushButton()
+        self.load_button.clicked.connect(lambda: self.load_profile(self.path.text()))
+        self.path.returnPressed.connect(self.load_button.click)
         path_row.addWidget(self.path)
-        path_row.addWidget(browse)
-        path_row.addWidget(load)
+        path_row.addWidget(self.browse_button)
+        path_row.addWidget(self.load_button)
         layout.addLayout(path_row)
-        self.summary = QLabel("Bitte ein MACH3-Profil laden.")
+
+        self.summary = QLabel()
         self.summary.setWordWrap(True)
         layout.addWidget(self.summary)
-        legend = QLabel("Übernommen = Rohwert gelesen · Interpretiert = Darstellungsumwandlung · "
-                        "Unbekannt = fehlt/ungültig/nicht zugeordnet. Kein Status bestätigt einen simCNC-Export.")
-        legend.setWordWrap(True)
-        layout.addWidget(legend)
+
+        self.legend = QLabel()
+        self.legend.setWordWrap(True)
+        layout.addWidget(self.legend)
+
         self.search = QLineEdit()
-        self.search.setPlaceholderText("Tabellen filtern: Feldname, Wert oder Hinweis …")
         self.search.textChanged.connect(self.filter_rows)
         layout.addWidget(self.search)
+
         self.tabs = QTabWidget()
         self.tables = {}
-        for group in GROUPS:
-            widget = table(["Komponente", "Parameter", "MACH3-Feld", "Rohwert", "Gelesener Wert", "Status", "Hinweis"])
+        for group, _ in GROUPS:
+            widget = table(self.parameter_headers())
             self.tables[group] = widget
-            self.tabs.addTab(widget, group)
-        self.status_table = table(["Status", "Meldung"])
-        self.tabs.addTab(self.status_table, "Status / Warnungen")
-        self.reference_table = table(["XML-Pfad (simCNC-Referenz)", "Originalwert"])
-        self.tabs.addTab(self.reference_table, "simCNC-Referenz")
+            self.tabs.addTab(widget, "")
+        self.status_table = table(self.status_headers())
+        self.tabs.addTab(self.status_table, "")
+        self.reference_table = table(self.reference_headers())
+        self.tabs.addTab(self.reference_table, "")
         layout.addWidget(self.tabs)
+
         bottom = QHBoxLayout()
-        check = QPushButton("Prüfen")
-        check.clicked.connect(self.check_profile)
-        bottom.addWidget(check)
+        self.check_button = QPushButton()
+        self.check_button.clicked.connect(self.check_profile)
+        bottom.addWidget(self.check_button)
         bottom.addStretch()
-        export = QPushButton("simCNC-Export · später verfügbar")
-        export.setEnabled(False)
-        bottom.addWidget(export)
+        self.export_button = QPushButton()
+        self.export_button.setEnabled(False)
+        bottom.addWidget(self.export_button)
         layout.addLayout(bottom)
 
+        self.retranslate_ui()
+
+    def parameter_headers(self):
+        return [
+            self.i18n.t("table.component"),
+            self.i18n.t("table.parameter"),
+            self.i18n.t("table.mach3_field"),
+            self.i18n.t("table.raw_value"),
+            self.i18n.t("table.read_value"),
+            self.i18n.t("table.status"),
+            self.i18n.t("table.note"),
+        ]
+
+    def status_headers(self):
+        return [
+            self.i18n.t("table.status"),
+            self.i18n.t("table.message"),
+        ]
+
+    def reference_headers(self):
+        return [
+            self.i18n.t("table.simcnc_path"),
+            self.i18n.t("table.original_value"),
+        ]
+
+    def status_colors(self):
+        return {
+            self.i18n.status(Status.COPIED): "#d9efdf",
+            self.i18n.status(Status.INTERPRETED): "#fff0c2",
+            self.i18n.status(Status.UNKNOWN): "#f4dada",
+        }
+
+    def retranslate_ui(self):
+        self.setWindowTitle(self.i18n.t("window.title"))
+        self.controller_label.setText(self.i18n.t("label.controller"))
+        self.language_label.setText(self.i18n.t("label.language"))
+        self.reference_button.setText(self.i18n.t("button.load_reference"))
+        self.path.setPlaceholderText(self.i18n.t("placeholder.profile_path"))
+        self.browse_button.setText(self.i18n.t("button.browse"))
+        self.load_button.setText(self.i18n.t("button.load"))
+        self.legend.setText(self.i18n.t("legend"))
+        self.search.setPlaceholderText(self.i18n.t("placeholder.search"))
+        self.check_button.setText(self.i18n.t("button.check"))
+        self.export_button.setText(self.i18n.t("button.export_later"))
+
+        for index, (group, key) in enumerate(GROUPS):
+            self.tabs.setTabText(index, self.i18n.t(key))
+            self.tables[group].setHorizontalHeaderLabels(self.parameter_headers())
+        self.status_table.setHorizontalHeaderLabels(self.status_headers())
+        self.reference_table.setHorizontalHeaderLabels(self.reference_headers())
+        self.tabs.setTabText(len(GROUPS), self.i18n.t("tab.status"))
+        self.tabs.setTabText(len(GROUPS) + 1, self.i18n.t("tab.reference"))
+
+        if self.profile is None:
+            self.summary.setText(self.i18n.t("summary.empty"))
+        else:
+            self.populate_profile_tables()
+            self.refresh_summary()
+            self.refresh_status()
+        if self.reference_rows:
+            populate(self.reference_table, self.reference_rows)
+        self.filter_rows()
+
+    def change_language(self):
+        self.i18n.set_language(self.language.currentData())
+        self.retranslate_ui()
+
     def choose_profile(self):
-        path, _ = QFileDialog.getOpenFileName(self, "MACH3-Profil auswählen", "", "XML / TXT (*.xml *.txt);;Alle Dateien (*)")
+        path, _ = QFileDialog.getOpenFileName(
+            self,
+            self.i18n.t("dialog.profile_title"),
+            "",
+            self.i18n.t("dialog.file_filter"),
+        )
         if path:
             self.load_profile(path)
 
@@ -116,31 +211,63 @@ class MainWindow(QMainWindow):
         try:
             profile = parse_mach3(path)
         except ProfileError as exc:
-            QMessageBox.warning(self, "Profil nicht geladen", str(exc))
+            QMessageBox.warning(self, self.i18n.t("dialog.profile_error"), self.i18n.term(str(exc)))
             return False
         self.profile = profile
         self.path.setText(str(profile.path))
-        for group, widget in self.tables.items():
-            rows = []
-            for p in profile.parameters:
-                if p.group == group:
-                    value = "—" if p.value is None else ("Ja" if p.value else "Nein") if isinstance(p.value, bool) else p.value
-                    rows.append((p.component, p.name, p.source, p.raw, value, p.status.value, p.note))
-            populate(widget, rows)
-        axes = sum(profile.get(f"Motor{i}Active") is True for i in range(6))
-        self.summary.setText(f"Geladen: {profile.path.name} · {axes} aktive Achsen (X–C) · "
-            f"Motor6: {profile.get('Motor6Active')} · {profile.active_count('Input')} aktive Inputs · "
-            f"{profile.active_count('Output')} aktive Outputs · {len(profile.parameters)} Felder")
+        self.populate_profile_tables()
+        self.refresh_summary()
         self.refresh_status()
         self.filter_rows()
         return True
+
+    def populate_profile_tables(self):
+        for group, widget in self.tables.items():
+            rows = []
+            for p in self.profile.parameters:
+                if p.group == group:
+                    rows.append((
+                        self.i18n.term(p.component),
+                        self.i18n.term(p.name),
+                        p.source,
+                        p.raw,
+                        self.display_value(p.value),
+                        self.i18n.status(p.status),
+                        self.i18n.term(p.note),
+                    ))
+            populate(widget, rows, self.status_colors())
+
+    def display_value(self, value):
+        if value is None:
+            return self.i18n.t("value.empty")
+        if isinstance(value, bool):
+            return self.i18n.t("value.yes") if value else self.i18n.t("value.no")
+        return value
+
+    def refresh_summary(self):
+        axes = sum(self.profile.get(f"Motor{i}Active") is True for i in range(6))
+        self.summary.setText(self.i18n.t(
+            "summary.loaded",
+            name=self.profile.path.name,
+            axes=axes,
+            motor6=self.display_value(self.profile.get("Motor6Active")),
+            inputs=self.profile.active_count("Input"),
+            outputs=self.profile.active_count("Output"),
+            fields=len(self.profile.parameters),
+        ))
 
     def refresh_status(self):
         if self.profile is None:
             return
         plan = CONTROLLERS[self.controller.currentText()].plan(self.profile)
-        populate(self.status_table, [("Prüfen", w) for w in plan.warnings])
-        self.statusBar().showMessage(f"{plan.controller} · Ansicht der Quelldaten · Export noch nicht freigegeben")
+        populate(self.status_table, [
+            (self.i18n.t("button.check"), self.i18n.warning(w))
+            for w in plan.warnings
+        ])
+        self.statusBar().showMessage(self.i18n.t(
+            "statusbar.ready",
+            controller=plan.controller,
+        ))
         self.filter_rows()
 
     def check_profile(self):
@@ -148,7 +275,12 @@ class MainWindow(QMainWindow):
         self.tabs.setCurrentWidget(self.status_table)
 
     def choose_reference(self):
-        path, _ = QFileDialog.getOpenFileName(self, "simCNC-Referenz auswählen", "", "XML / TXT (*.xml *.txt);;Alle Dateien (*)")
+        path, _ = QFileDialog.getOpenFileName(
+            self,
+            self.i18n.t("dialog.reference_title"),
+            "",
+            self.i18n.t("dialog.file_filter"),
+        )
         if path:
             self.load_reference(path)
 
@@ -156,9 +288,10 @@ class MainWindow(QMainWindow):
         try:
             rows = inspect_template(path)
         except ProfileError as exc:
-            QMessageBox.warning(self, "Referenz nicht geladen", str(exc))
+            QMessageBox.warning(self, self.i18n.t("dialog.reference_error"), self.i18n.term(str(exc)))
             return False
-        populate(self.reference_table, rows)
+        self.reference_rows = rows
+        populate(self.reference_table, self.reference_rows)
         self.reference_table.setToolTip(str(path))
         self.tabs.setCurrentWidget(self.reference_table)
         self.filter_rows()
