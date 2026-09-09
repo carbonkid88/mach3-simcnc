@@ -1,0 +1,5 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Safety notice
+    url: https://github.com/carbonkid88/mach3-simcnc/blob/main/SAFETY.md
+    about: Read this before testing migrated values near a real machine.

@@ -1,0 +1,83 @@
+name: Migration feedback
+description: Report findings from a MACH3 to simCNC migration check
+title: "[Migration feedback]: "
+labels:
+  - migration-feedback
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for testing this with a real profile. Please anonymize any files or snippets before sharing them.
+  - type: input
+    id: tool-version
+    attributes:
+      label: Tool version
+      description: Version shown in the application window or lower control bar.
+      placeholder: "0.2.1"
+    validations:
+      required: true
+  - type: dropdown
+    id: controller
+    attributes:
+      label: Controller model
+      options:
+        - CSMIO/IP-M
+        - CSMIO/IP-S
+        - CSMIO/IP-A
+        - Other / unknown
+    validations:
+      required: true
+  - type: input
+    id: mach3-version
+    attributes:
+      label: MACH3 version
+      placeholder: "Unknown"
+  - type: input
+    id: simcnc-version
+    attributes:
+      label: simCNC version
+      placeholder: "Unknown"
+  - type: textarea
+    id: machine-setup
+    attributes:
+      label: Machine setup
+      description: Axes, spindle type, homing/limits, relevant inputs/outputs.
+      placeholder: "Example: XYZ router, VFD spindle, home switches on X/Y/Z, probe input..."
+    validations:
+      required: true
+  - type: textarea
+    id: finding
+    attributes:
+      label: What looks wrong or needs confirmation?
+      description: Name the table row, MACH3 field, value, or warning involved.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected result
+      description: What should the tool show, or what mapping is confirmed from your setup?
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual result
+      description: What did the tool show?
+    validations:
+      required: true
+  - type: textarea
+    id: sample
+    attributes:
+      label: Anonymized sample data
+      description: Attach or paste the smallest anonymized XML/profile snippet that helps reproduce the finding.
+      render: xml
+  - type: checkboxes
+    id: safety
+    attributes:
+      label: Safety and privacy confirmation
+      options:
+        - label: I did not use unverified migrated values on a real machine.
+          required: true
+        - label: I removed or anonymized private paths, customer names, machine names, macros, and other sensitive data.
+          required: true

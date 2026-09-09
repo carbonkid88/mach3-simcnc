@@ -4,6 +4,52 @@ Eigenständige Python-Anwendung mit PyQt5 zur Prüfung eines MACH3-Profils.
 Die erste Version liest Maschinenparameter und bereitet die Migration vor.
 Sie schreibt keine simCNC-Konfiguration und steuert keine Maschine.
 
+> Frühes Community-Validierungstool: migrierte Werte niemals ohne manuelle
+> Prüfung an einer realen Maschine verwenden.
+
+## Projektstatus und Mithilfe
+
+Dieses Projekt befindet sich in einer frühen Entwicklungsphase. Es soll beim
+Verstehen und Vorbereiten einer Migration von MACH3 nach simCNC helfen, ist aber
+noch kein fertiger, validierter Konverter.
+
+Der Autor verwendet selbst kein MACH3 und kann reale Migrationen daher nicht
+vollständig praktisch verifizieren. Besonders wertvoll ist deshalb Feedback von
+Nutzern, die tatsächlich MACH3-Profile besitzen oder gerade von MACH3 auf simCNC
+umsteigen.
+
+Aktuell gilt:
+
+- Das Tool liest MACH3-Profile und zeigt erkannte Parameter strukturiert an.
+- Es markiert Werte, die gelesen, interpretiert oder nicht eindeutig zugeordnet wurden.
+- Es erstellt noch keine garantiert lauffähige simCNC-Konfiguration.
+- Port/Pin-Zuordnungen, Signalnamen, Einheiten, Homing, Limits, Spindelwerte und
+  Sicherheitsfunktionen müssen immer manuell geprüft und bestätigt werden.
+
+Bitte keine erzeugten oder übernommenen Werte ungeprüft an einer realen Maschine
+verwenden. Jede Migration muss zuerst sicher offline, danach kontrolliert und
+ohne Risiko für Maschine, Werkzeug oder Personen getestet werden.
+
+Hilfreiche Beiträge sind:
+
+- anonymisierte MACH3-Profile
+- passende simCNC-Referenzkonfigurationen
+- bestätigte Feldbedeutungen und Mapping-Regeln
+- Fehlerberichte mit Beispielwerten
+- Hinweise zu CSMIO/IP-M, CSMIO/IP-S und CSMIO/IP-A Setups
+
+Vor dem Teilen von Profilen bitte prüfen, ob darin sensible Daten wie Pfade,
+Kundennamen, Makros, Maschinenbezeichnungen oder andere interne Informationen
+enthalten sind.
+
+Weitere Hinweise:
+
+- `SAFETY.md` beschreibt den sicheren Umgang mit migrierten Maschinenwerten.
+- `CONTRIBUTING.md` erklärt, wie Beiträge und Migrationsfeedback hilfreich
+  eingereicht werden können.
+- `CHANGELOG.md` dokumentiert die Änderungen pro Version.
+- GitHub-Issue-Templates helfen beim Melden von Bugs und Migrationsfeedback.
+
 ## Start unter Windows / VSCode
 
 Python 3.10 oder neuer mit PyQt5 verwenden. In VSCode diesen Projektordner
@@ -126,7 +172,7 @@ Die simCNC-Vorlage verwendet `Engine` als Wurzel und unter anderem
 Zum Veröffentlichen zuerst `git init`, dann die Dateien prüfen und committen.
 Die `.gitignore` schließt Profile, virtuelle Umgebung und Build-Dateien aus.
 PyQt5-Lizenzbedingungen sind für die spätere Distribution gesondert zu prüfen;
-dieses Projekt legt noch keine eigene Distributionslizenz fest.
+der Projektcode steht unter der MIT-Lizenz, siehe `LICENSE`.
 
 ---
 
@@ -135,6 +181,50 @@ dieses Projekt legt noch keine eigene Distributionslizenz fest.
 Standalone Python application with PyQt5 for checking a MACH3 profile.
 The first version reads machine parameters and prepares the migration.
 It does not write a simCNC configuration and does not control a machine.
+
+> Early community validation tool: never use migrated values on a real machine
+> without manual verification.
+
+## Project Status and Contributions
+
+This project is in an early development phase. It is intended to help understand
+and prepare a migration from MACH3 to simCNC, but it is not yet a finished,
+validated converter.
+
+The author does not use MACH3 personally and therefore cannot fully verify real
+migrations in practice. Feedback from users who actually have MACH3 profiles or
+are currently switching from MACH3 to simCNC is especially valuable.
+
+Current state:
+
+- The tool reads MACH3 profiles and displays recognized parameters in a structured way.
+- It marks values that were read, interpreted, or not clearly mapped.
+- It does not yet create a guaranteed working simCNC configuration.
+- Port/pin mappings, signal names, units, homing, limits, spindle values, and
+  safety functions must always be checked and confirmed manually.
+
+Do not use generated or imported values on a real machine without verification.
+Every migration must first be tested safely offline, then under controlled
+conditions and without risk to people, the machine, or tooling.
+
+Helpful contributions include:
+
+- anonymized MACH3 profiles
+- matching simCNC reference configurations
+- confirmed field meanings and mapping rules
+- bug reports with example values
+- notes about CSMIO/IP-M, CSMIO/IP-S, and CSMIO/IP-A setups
+
+Before sharing profiles, please check whether they contain sensitive information
+such as paths, customer names, macros, machine names, or other internal data.
+
+Additional project files:
+
+- `SAFETY.md` describes safe handling of migrated machine values.
+- `CONTRIBUTING.md` explains how to submit useful contributions and migration
+  feedback.
+- `CHANGELOG.md` documents changes per version.
+- GitHub issue templates help report bugs and migration feedback.
 
 ## Starting on Windows / VSCode
 
@@ -258,4 +348,4 @@ The simCNC template uses `Engine` as its root and includes, among others,
 Before publishing, run `git init`, then review and commit the files.
 The `.gitignore` excludes profiles, the virtual environment, and build files.
 PyQt5 license terms must be checked separately for later distribution;
-this project does not define its own distribution license yet.
+the project code is released under the MIT license, see `LICENSE`.
